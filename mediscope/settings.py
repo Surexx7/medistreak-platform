@@ -251,7 +251,7 @@ STORAGES = {
     # etc.
     #
     "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
+        "BACKEND": "mediscope.storage.SupabaseStorage",
     },
 
     # --------------------------------------------------------
