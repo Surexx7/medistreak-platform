@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+
+{% block title %}3D Anatomy Explorer - MediScope{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold gradient-text mb-4">3D Anatomy Explorer</h1>
+            <p class="text-gray-600 text-lg">Explore the human body in interactive 3D</p>
+        </div>
+
+        <!-- Systems Grid -->
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+            {% for system in systems %}
+            <div class="bg-white rounded-xl shadow-sm border hover:shadow-md transition-shadow p-6">
+                <div class="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
+                    <i data-lucide="activity" class="w-8 h-8 text-blue-600"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">{{ system.name }}</h3>
+                <p class="text-gray-600 mb-4">{{ system.description|truncatewords:15 }}</p>
+                <div class="text-sm text-gray-500 mb-4">
+                    {{ system.anatomymodel_set.count }} models available
+                </div>
+                <button onclick="showSystemModels('{{ system.id }}')" class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
+                    Explore System
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- 3D Viewer -->
+        <div class="bg-white rounded-xl shadow-sm border p-6 mb-8">
+            <h2 class="text-2xl font-semibold text-gray-900 mb-4">3D Model Viewer</h2>
+            <div id="model-viewer" class="bg-gray-100 rounded-lg h-96 flex items-center justify-center">
+                <div class="text-center text-gray-500">
+                    <div class="text-6xl mb-4">
+                        <i data-lucide="cube"></i>
+                    </div>
+                    <p>Select a model to view in 3D</p>
+                </div>
+            </div>
+            <div id="model-info" class="mt-4 hidden">
+                <h3 id="model-name" class="text-lg font-semibold text-gray-900 mb-2"></h3>
+                <p id="model-description" class="text-gray-600 mb-2"></p>
+                <p id="model-fun-fact" class="text-blue-600 italic"></p>
+            </div>
+        </div>
+
+        <!-- Models List -->
+        <div class="bg-white rounded-xl shadow-sm border p-6">
+            <h2 class="text-2xl font-semibold text-gray-900 mb-6">Available Models</h2>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for model in models %}
+                <div class="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors" onclick="loadModel('{{ model.id }}')">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                            <i data-lucide="eye" class="w-5 h-5 text-green-600"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-medium text-gray-900">{{ model.name }}</h4>
+                            <p class="text-sm text-gray-500">{{ model.system.name }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showSystemModels(systemId) {
+    // Filter models by system
+    const models = document.querySelectorAll('[data-system="' + systemId + '"]');
+    // Implementation for filtering models by system
+    alert('Showing models for system: ' + systemId);
+}
+
+function loadModel(modelId) {
+    // Load 3D model
+    const viewer = document.getElementById('model-viewer');
+    viewer.innerHTML = `
+        <div class="text-center">
+            <div class="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p class="text-gray-600">Loading 3D model...</p>
+        </div>
+    `;
+    
+    // Fetch model info
+    fetch('/anatomy/api/model/' + modelId + '/')
+        .then(response => response.json())
+        .then(data => {
+            // Update model info
+            document.getElementById('model-name').textContent = data.name;
+            document.getElementById('model-description').textContent = data.description;
+            document.getElementById('model-fun-fact').textContent = 'Fun Fact: ' + data.fun_fact;
+            document.getElementById('model-info').classList.remove('hidden');
+            
+            // Simulate 3D model loading
+            setTimeout(() => {
+                viewer.innerHTML = `
+                    <div class="text-center text-green-600">
+                        <div class="text-6xl mb-4">
+                            <i data-lucide="check-circle"></i>
+                        </div>
+                        <p class="font-medium">${data.name} loaded successfully!</p>
+                        <p class="text-sm text-gray-500 mt-2">3D model would be displayed here</p>
+                    </div>
+                `;
+            }, 2000);
+        })
+        .catch(error => {
+            viewer.innerHTML = `
+                <div class="text-center text-red-600">
+                    <div class="text-6xl mb-4">
+                        <i data-lucide="x-circle"></i>
+                    </div>
+                    <p>Failed to load model</p>
+                </div>
+            `;
+        });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+
+{% block title %}AI Symptom Checker - MediScope{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold gradient-text mb-4">AI Symptom Checker</h1>
+            <p class="text-gray-600 text-lg">Get insights about your symptoms using AI technology</p>
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-6">
+                <p class="text-yellow-800 text-sm">
+                    <i data-lucide="alert-triangle" class="w-4 h-4 inline mr-1"></i>
+                    <strong>Disclaimer:</strong> This tool is for educational purposes only. Always consult a healthcare professional for medical advice.
+                </p>
+            </div>
+        </div>
+
+        <!-- Symptom Checker Form -->
+        <div class="bg-white rounded-xl shadow-sm border p-8">
+            <form id="symptom-form">
+                {% csrf_token %}
+                
+                <!-- Personal Information -->
+                <div class="mb-8">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Personal Information</h2>
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Age</label>
+                            <input type="number" id="age" min="1" max="120" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+                            <select id="gender" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                                <option value="">Select gender</option>
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Symptoms Selection -->
+                <div class="mb-8">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Select Your Symptoms</h2>
+                    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {% for symptom in symptoms %}
+                        <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-3 rounded-lg transition-colors">
+                            <input type="checkbox" name="symptoms" value="{{ symptom.name }}" class="text-blue-600 rounded">
+                            <span class="text-gray-700">{{ symptom.name }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Additional Symptoms -->
+                <div class="mb-8">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Additional Symptoms (optional)</label>
+                    <textarea id="additional-symptoms" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Describe any other symptoms you're experiencing..."></textarea>
+                </div>
+
+                <div class="text-center">
+                    <button type="submit" class="bg-gradient-to-r from-blue-500 to-green-500 text-white px-8 py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity">
+                        <i data-lucide="search" class="w-5 h-5 inline mr-2"></i>
+                        Check Symptoms
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results-section" class="hidden mt-8">
+            <div class="bg-white rounded-xl shadow-sm border p-8">
+                <h2 class="text-2xl font-semibold text-gray-900 mb-6">Possible Conditions</h2>
+                <div id="results-content"></div>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading" class="hidden mt-8">
+            <div class="bg-white rounded-xl shadow-sm border p-8 text-center">
+                <div class="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+                <p class="text-gray-600">Analyzing your symptoms...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('symptom-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // Show loading
+    document.getElementById('loading').classList.remove('hidden');
+    document.getElementById('results-section').classList.add('hidden');
+    
+    // Collect form data
+    const formData = new FormData(this);
+    const symptoms = [];
+    const checkboxes = document.querySelectorAll('input[name="symptoms"]:checked');
+    checkboxes.forEach(checkbox => symptoms.push(checkbox.value));
+    
+    const data = {
+        symptoms: symptoms,
+        age: document.getElementById('age').value,
+        gender: document.getElementById('gender').value,
+        additional_symptoms: document.getElementById('additional-symptoms').value
+    };
+    
+    // Submit to backend
+    fetch('{% url "check_symptoms" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('loading').classList.add('hidden');
+        
+        if (data.success) {
+            displayResults(data.results, data.disclaimer);
+        } else {
+            alert('Error: ' + data.error);
+        }
+    })
+    .catch(error => {
+        document.getElementById('loading').classList.add('hidden');
+        alert('An error occurred. Please try again.');
+    });
+});
+
+function displayResults(results, disclaimer) {
+    const resultsContent = document.getElementById('results-content');
+    
+    if (results.length === 0) {
+        resultsContent.innerHTML = `
+            <div class="text-center py-8">
+                <div class="text-6xl text-gray-300 mb-4">
+                    <i data-lucide="search-x"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-600 mb-2">No Matches Found</h3>
+                <p class="text-gray-500">We couldn't find any conditions matching your symptoms. Consider consulting a healthcare professional.</p>
+            </div>
+        `;
+    } else {
+        let html = '';
+        results.forEach((condition, index) => {
+            const severityColor = condition.severity === 'High' ? 'red' : 
+                                condition.severity === 'Medium' ? 'yellow' : 'green';
+            
+            html += `
+                <div class="border rounded-lg p-6 mb-4">
+                    <div class="flex items-start justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">${condition.name}</h3>
+                        <span class="bg-${severityColor}-100 text-${severityColor}-700 px-2 py-1 rounded-full text-xs font-medium">
+                            ${condition.severity} Severity
+                        </span>
+                    </div>
+                    <p class="text-gray-600 mb-4">${condition.description}</p>
+                    
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <h4 class="font-medium text-gray-900 mb-2">Recommendations:</h4>
+                            <p class="text-sm text-gray-600">${condition.recommendations}</p>
+                        </div>
+                        <div>
+                            <h4 class="font-medium text-gray-900 mb-2">When to see a doctor:</h4>
+                            <p class="text-sm text-gray-600">${condition.when_to_see_doctor}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += `
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6">
+                <p class="text-blue-800 text-sm">
+                    <i data-lucide="info" class="w-4 h-4 inline mr-1"></i>
+                    ${disclaimer}
+                </p>
+            </div>
+        `;
+        
+        resultsContent.innerHTML = html;
+    }
+    
+    document.getElementById('results-section').classList.remove('hidden');
+}
+</script>
+{% endblock %}
