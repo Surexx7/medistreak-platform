@@ -23,3 +23,10 @@ staticfiles/
 
 # OS
 .DS_Store
+
+# One-time production migration files
+content_backup.json
+remaining_backup.json
+local_content_ids.json
+production_pre_remaining_import.json
+migration_tools/
