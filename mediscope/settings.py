@@ -271,7 +271,7 @@ STORAGES = {
         "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
 }
-
+WHITENOISE_MANIFEST_STRICT = False
 
 # ============================================================
 # MEDIA / USER UPLOADS
